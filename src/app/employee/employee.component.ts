@@ -23,13 +23,10 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
 import { HttpClient } from '@angular/common/http';
 import { Renderer2, ChangeDetectorRef } from '@angular/core';
-import { debounceTime, switchMap } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { info } from 'node:console';
-
 
 @Component({
   selector: 'app-root',
@@ -62,16 +59,13 @@ import { info } from 'node:console';
   ]
 })
 export class EmployeeComponent implements OnInit {
-filteredEmployees: any;
-nameSuggestions: string[][] = [[]]; // One array per employee row
-employeeGroup: any;
-i: number | undefined;
+  filteredEmployees: any;
+  nameSuggestions: string[][] = [[]];
   employeeForm: FormGroup;
   isDarkMode = false;
-  designation = ['Intern','Junior Developer','Software Engineer','Senior Software Engineer','Team Lead','Project Manager','QA Analyst','QA Lead','DevOps Engineer','HR Executive','HR Manager']
+  designation = ['Intern', 'Junior Developer', 'Software Engineer', 'Senior Software Engineer', 'Team Lead', 'Project Manager', 'QA Analyst', 'QA Lead', 'DevOps Engineer', 'HR Executive', 'HR Manager'];
   departments = ['IT', 'HR', 'Finance', 'Operations', 'Marketing'];
   employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Temporary'];
-name: unknown;
   employeeIds!: string[];
 
   constructor(
@@ -111,33 +105,16 @@ name: unknown;
       designation: ['', Validators.required]
     });
 
-    // Add autocomplete behavior
-    group.get('employeeName')!.valueChanges.pipe(
-      debounceTime(300),
-      switchMap(value => (typeof value === 'string' && value.length >= 2) ? this.searchEmployee(value) : of(null))
-    ).subscribe(data => {
-      if (data) {
-        // Only auto-fill if a full match is returned
-        this.fillEmployeeData(group, data);
-      }
-    });
+    group.get('employeeName')!.valueChanges
+      .pipe(debounceTime(300))
+      .subscribe(value => {
+        if (typeof value === 'string' && value.length >= 2) {
+          const index = this.employees.controls.indexOf(group);
+          this.onNameInput(value, index);
+        }
+      });
 
     return group;
-  }
-
-  searchEmployee(query: string) {
-    return this.http.get<any>(`https://localhost:5000/employees/search?query=${query}`);
-  }
-
-  fillEmployeeData(group: FormGroup, data: any): void {
-    group.patchValue({
-      employeeId: data.employeeId,
-      joiningDate: data.joiningDate,
-      employeeEmail: data.employeeEmail,
-      department: data.department,
-      employmentType: data.employmentType,
-      designation: data.designation
-    });
   }
 
   addEmployee() {
@@ -150,8 +127,7 @@ name: unknown;
     }
 
     this.employees.push(this.createEmployeeGroup());
-    this.nameSuggestions.push([]); 
-
+    this.nameSuggestions.push([]);
     setTimeout(() => {
       const selects = document.querySelectorAll('select');
       selects.forEach((el: any) => {
@@ -173,29 +149,22 @@ name: unknown;
 
   saveEmployee(index: number): void {
     const employeeGroup = this.employees.at(index) as FormGroup;
-    Object.keys(employeeGroup.controls).forEach(controlName => {
-      const control = employeeGroup.get(controlName);
-      control?.markAsTouched();
-    });
-
-    const containers = document.querySelectorAll('.employee-section-box');
-    const Container = containers[index] as HTMLElement | null;
+    employeeGroup.markAllAsTouched();
 
     if (employeeGroup.invalid) {
-      if (Container) {
-        const firstInvalid = Container.querySelector('.ng-invalid') as HTMLElement | null;
-        if (firstInvalid) {
-          setTimeout(() => {
-            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            firstInvalid.focus();
-          }, 0);
-        }
+      const container = document.querySelectorAll('.employee-section-box')[index];
+      const firstInvalid = container?.querySelector('.ng-invalid') as HTMLElement;
+      if (firstInvalid) {
+        setTimeout(() => {
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstInvalid.focus();
+        }, 0);
       }
       return;
     }
 
     const employeeData = employeeGroup.value;
-    this.http.post('http://localhost:8080/rating/bulkSave', employeeData).subscribe({
+    this.http.post('https://localhost:5000/employees', employeeData).subscribe({
       next: () => alert(`Employee ${index + 1} saved successfully!`),
       error: err => alert('Error saving employee: ' + err.message)
     });
@@ -206,7 +175,7 @@ name: unknown;
     this.employees.controls.forEach(group => group.markAllAsTouched());
 
     if (this.employeeForm.valid) {
-      this.http.post('http://localhost:8080/rating/bulkSave', this.employeeForm.value).subscribe({
+      this.http.post('', this.employeeForm.value).subscribe({
         next: () => alert('Data submitted to server successfully!'),
         error: err => alert('Error submitting data: ' + err.message)
       });
@@ -216,24 +185,11 @@ name: unknown;
   }
 
   scrollToFirstError(): void {
-    const employeeContainers = document.querySelectorAll('.employee-section-box');
-    for (let i = 0; i < employeeContainers.length; i++) {
-      const container = employeeContainers[i];
-      const invalidControl = container.querySelector('.ng-invalid') as HTMLElement | null;
-      if (invalidControl) {
-        setTimeout(() => {
-          invalidControl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          invalidControl.focus();
-        }, 0);
-        return;
-      }
-    }
-
-    const firstInvalid = document.querySelector('.ng-invalid') as HTMLElement | null;
-    if (firstInvalid) {
+    const invalidControl = document.querySelector('.ng-invalid') as HTMLElement;
+    if (invalidControl) {
       setTimeout(() => {
-        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        firstInvalid.focus();
+        invalidControl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        invalidControl.focus();
       }, 0);
     }
   }
@@ -256,7 +212,6 @@ name: unknown;
       root.classList.remove('dark-mode', 'dark-theme');
       localStorage.setItem('theme', 'light');
     }
-
     setTimeout(() => {
       const selects = document.querySelectorAll('select');
       selects.forEach((el: any) => {
@@ -279,51 +234,35 @@ name: unknown;
     }
 
     this.nameSuggestions = [[]];
-
     this.http.get<string[]>('http://localhost:8080/api/allemployeeids').subscribe({
-    next: (ids) => {
-      this.employeeIds = ids;
-    },
-    error: err => {
-      console.error('Failed to fetch employee IDs', err);
-    }
-  });
-
+      next: (ids) => this.employeeIds = ids,
+      error: err => console.error('Failed to fetch employee IDs', err)
+    });
 
     setTimeout(() => this.cdRef.detectChanges(), 0);
   }
-  
 
-  // nameSuggestions declaration moved to the top with correct type
+  onNameInput(inputValue: string, index: number): void {
+    this.http.get<any[]>(`http://localhost:8080/api/nameSuggestions?query=${inputValue}`)
+      .subscribe(suggestions => this.nameSuggestions[index] = suggestions);
+  }
 
-onNameInput(inputValue: string, index: number): void {
-  this.http.get<any[]>(`http://localhost:8080/api/nameSuggestions?query=${inputValue}`)
-    .subscribe((suggestions) => {
-      this.nameSuggestions[index] = suggestions;
-    });
-}
-
-onNameSelected(selectedName: string, index: number): void {
-  const employeeGroup = this.employees.at(index) as FormGroup;
-  this.http.get<any>(`http://localhost:8080/api/fetchByName?name=${selectedName}`)
-    .subscribe(data => {
-      const employeeId = data.employeeId;
-      this.http.get<any>(`http://localhost:8080/api/fetchAll/${employeeId}`)
-        .subscribe(info => {
-          
-
-      employeeGroup.patchValue({
-        employeeName: data.employeeName,
-        employeeId: data.employeeId,
-        joiningDate: data.joiningDate,
-        employeeEmail: data.employeeEmail,
-        employmentType: data.employmentType,
-        designation: data.designation,
-        department: data.department
+  onNameSelected(selectedName: string, index: number): void {
+    const employeeGroup = this.employees.at(index) as FormGroup;
+    this.http.get<any>(`http://localhost:8080/api/fetchByName?name=${selectedName}`)
+      .subscribe(data => {
+        this.http.get<any>(`http://localhost:8080/api/fetchAll/${data.employeeId}`)
+          .subscribe(info => {
+            employeeGroup.patchValue({
+              employeeName: info.employeeName,
+              employeeId: info.employeeId,
+              joiningDate: info.joiningDate,
+              employeeEmail: info.employeeEmail,
+              employmentType: info.employmentType,
+              designation: info.designation,
+              department: info.department
+            });
+          });
       });
-    });
-  });
+  }
 }
-
-}
-
