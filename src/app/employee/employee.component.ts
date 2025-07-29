@@ -195,7 +195,7 @@ name: unknown;
     }
 
     const employeeData = employeeGroup.value;
-    this.http.post('https://localhost:5000/employees', employeeData).subscribe({
+    this.http.post('http://localhost:8080/rating/bulkSave', employeeData).subscribe({
       next: () => alert(`Employee ${index + 1} saved successfully!`),
       error: err => alert('Error saving employee: ' + err.message)
     });
@@ -206,7 +206,7 @@ name: unknown;
     this.employees.controls.forEach(group => group.markAllAsTouched());
 
     if (this.employeeForm.valid) {
-      this.http.post('https://localhost:5000/employees', this.employeeForm.value).subscribe({
+      this.http.post('http://localhost:8080/rating/bulkSave', this.employeeForm.value).subscribe({
         next: () => alert('Data submitted to server successfully!'),
         error: err => alert('Error submitting data: ' + err.message)
       });
