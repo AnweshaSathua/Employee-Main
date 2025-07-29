@@ -71,6 +71,7 @@ i: number | undefined;
   departments = ['IT', 'HR', 'Finance', 'Operations', 'Marketing'];
   employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Temporary'];
 name: unknown;
+  employeeIds!: string[];
 
   constructor(
     private fb: FormBuilder,
@@ -278,6 +279,16 @@ name: unknown;
 
     this.nameSuggestions = [[]];
 
+    this.http.get<string[]>('http://localhost:8080/api/allemployeeids').subscribe({
+    next: (ids) => {
+      this.employeeIds = ids;
+    },
+    error: err => {
+      console.error('Failed to fetch employee IDs', err);
+    }
+  });
+
+
     setTimeout(() => this.cdRef.detectChanges(), 0);
   }
   
@@ -285,7 +296,7 @@ name: unknown;
   // nameSuggestions declaration moved to the top with correct type
 
 onNameInput(inputValue: string, index: number): void {
-  this.http.get<string[]>(`https://localhost:5000/employees/suggestions?query=${inputValue}`)
+  this.http.get<any[]>(`http://localhost:8080/api/allemployeeids?nameQuery=${inputValue}`)
     .subscribe((suggestions) => {
       this.nameSuggestions[index] = suggestions;
     });
@@ -293,8 +304,13 @@ onNameInput(inputValue: string, index: number): void {
 
 onNameSelected(selectedName: string, index: number): void {
   const employeeGroup = this.employees.at(index) as FormGroup;
-  this.http.get<any>(`https://localhost:5000/employees/details?name=${selectedName}`)
+  this.http.get<any>(`http://localhost:8080/api/allemployeeids?exactName=${selectedName}`)
     .subscribe(data => {
+      const selectedId = data.id; // adjust key if needed
+      const group = this.employees.at(index) as FormGroup;
+      this.http.get<any>(`http://localhost:8080/api/fetchAll/${selectedId}`)
+        .subscribe(info => {
+
       employeeGroup.patchValue({
         employeeName: data.employeeName,
         employeeId: data.employeeId,
@@ -305,6 +321,7 @@ onNameSelected(selectedName: string, index: number): void {
         department: data.department
       });
     });
+  });
 }
 
 }
