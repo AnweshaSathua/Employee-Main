@@ -28,6 +28,7 @@ import { of } from 'rxjs';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { info } from 'node:console';
 
 
 @Component({
@@ -296,7 +297,7 @@ name: unknown;
   // nameSuggestions declaration moved to the top with correct type
 
 onNameInput(inputValue: string, index: number): void {
-  this.http.get<any[]>(`http://localhost:8080/api/allemployeeids?nameQuery=${inputValue}`)
+  this.http.get<any[]>(`http://localhost:8080/api/nameSuggestions?query=${inputValue}`)
     .subscribe((suggestions) => {
       this.nameSuggestions[index] = suggestions;
     });
@@ -304,12 +305,12 @@ onNameInput(inputValue: string, index: number): void {
 
 onNameSelected(selectedName: string, index: number): void {
   const employeeGroup = this.employees.at(index) as FormGroup;
-  this.http.get<any>(`http://localhost:8080/api/allemployeeids?exactName=${selectedName}`)
+  this.http.get<any>(`http://localhost:8080/api/fetchByName?name=${selectedName}`)
     .subscribe(data => {
-      const selectedId = data.id; // adjust key if needed
-      const group = this.employees.at(index) as FormGroup;
-      this.http.get<any>(`http://localhost:8080/api/fetchAll/${selectedId}`)
+      const employeeId = data.employeeId;
+      this.http.get<any>(`http://localhost:8080/api/fetchAll/${employeeId}`)
         .subscribe(info => {
+          
 
       employeeGroup.patchValue({
         employeeName: data.employeeName,
